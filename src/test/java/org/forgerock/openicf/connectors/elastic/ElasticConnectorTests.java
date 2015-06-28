@@ -50,6 +50,8 @@ import java.util.Set;
  */
 public class ElasticConnectorTests {
 
+
+
     //set up logging
     private static final Log LOGGER = Log.getLog(ElasticConnectorTests.class);
 
@@ -80,6 +82,7 @@ public class ElasticConnectorTests {
         //You can use TestHelpers to do some of the boilerplate work in running a search
         //TestHelpers.search(theConnector, ObjectClass.ACCOUNT, filter, handler, null);
 
+        @SuppressWarnings("serial")
         final Set<Attribute> attrs = new HashSet<Attribute>() {{
             add(AttributeBuilder.build("__UID__","123456789"));
             add(AttributeBuilder.build("__NAME__","DOE"));

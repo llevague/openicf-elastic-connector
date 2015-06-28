@@ -1,6 +1,8 @@
 package org.forgerock.openicf.connectors.elastic.ElasticConnector.config
 
-import org.forgerock.openicf.connectors.elastic.ElasticHost
+import org.identityconnectors.common.security.GuardedString
+import org.identityconnectors.contract.data.groovy.Lazy
+
 
 /*
  * DO NOT REMOVE COPYRIGHT NOTICES OR THIS HEADER.
@@ -31,10 +33,6 @@ import org.forgerock.openicf.connectors.elastic.ElasticHost
  *  ----------- Contract Tests configuration ------------
  *  +---------------------------------------------------+
  */
-
-import org.identityconnectors.contract.data.groovy.Lazy
-import org.identityconnectors.common.security.GuardedString
-
 // Connector WRONG configuration for ValidateApiOpTests
 connector.i1.wrong.host=""
 connector.i2.wrong.login=""

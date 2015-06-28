@@ -54,7 +54,7 @@ import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
  * @version $Revision$ $Date$
  */
 @ConnectorClass(
-        displayNameKey = "ElasticConnector.connector.display",
+        displayNameKey = "ElasticConnector",
         configurationClass = ElasticConfiguration.class)
 public class ElasticConnector implements
         Connector
