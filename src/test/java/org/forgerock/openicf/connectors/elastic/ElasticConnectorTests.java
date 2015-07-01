@@ -66,7 +66,9 @@ public class ElasticConnectorTests {
     public void setUp() {
         ElasticConfiguration config = new ElasticConfiguration()
                 .withHosts(PROPERTIES.getProperty("configuration.hosts", String[].class))
-                .withIndex(PROPERTIES.getStringProperty("configuration.index"));
+                .withIndex(PROPERTIES.getStringProperty("configuration.index"))
+                .withType(PROPERTIES.getStringProperty("configuration.type"))
+                .withClusterName(PROPERTIES.getStringProperty("configuration.clusterName"));
         this.facade = getFacade(config);
         this.objectClass = new ObjectClass("MYUSER");
     }
@@ -109,7 +111,6 @@ public class ElasticConnectorTests {
         for (ConnectorObject result : results) {
             System.out.println(result.getAttributeByName("ID"));
         }
-        Assert.assertFalse(results.isEmpty(), "No result found");
     }
 
     protected ConnectorFacade getFacade(ElasticConfiguration config) {

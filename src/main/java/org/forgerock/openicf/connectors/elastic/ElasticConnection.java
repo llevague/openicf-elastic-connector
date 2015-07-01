@@ -28,9 +28,10 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.node.Node;
+import org.identityconnectors.framework.common.exceptions.ConfigurationException;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 
-import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class to represent a ElasticConnector Connection.
@@ -40,7 +41,7 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
  */
 public class ElasticConnection {
 
-    private final Client client;
+    private final static AtomicReference<Client> refClient = new AtomicReference<>();
 
     /**
      * Constructor of ElasticConnectorConnection class.
@@ -48,26 +49,30 @@ public class ElasticConnection {
      * @param configuration the actual {@link ElasticConfiguration}
      */
     public ElasticConnection(ElasticConfiguration configuration) {
-        final Settings settings = ImmutableSettings.settingsBuilder()
-                .put("cluster.name", configuration.getClusterName()).build();
-        final TransportClient transportClient = new TransportClient(settings);
-        for(String host : configuration.getHosts()) {
-            final String[] parts = host.split(":");
-            final String server = parts[0];
-            final int port = parts.length > 1 ? Integer.valueOf(parts[1]) : 9300;
-            transportClient.addTransportAddress(new InetSocketTransportAddress(server, port));
+        if (refClient.get() == null) {
+            final Settings settings = ImmutableSettings.settingsBuilder()
+                    .put("cluster.name", configuration.getClusterName())
+                    .build();
+            try {
+                final TransportClient transportClient = new TransportClient(settings);
+                for (String host : configuration.getHosts()) {
+                    try {
+                        final String[] parts = host.split(":");
+                        final String server = parts[0];
+                        final int port = parts.length > 1 ? Integer.valueOf(parts[1]) : 9300;
+                        transportClient.addTransportAddress(new InetSocketTransportAddress(server, port));
+                    } catch (NumberFormatException e) {
+                        throw new ConfigurationException("Hosts must have 'server:port' form");
+                    }
+                }
+                refClient.set(transportClient);
+            } catch (Throwable e) {
+                throw new ConnectorException(e);
+            }
         }
-        this.client = transportClient;
-    }
-
-    /**
-     * Release internal resources.
-     */
-    public void dispose() {
-        client.close();
     }
 
     public Client client() {
-        return client;
+        return refClient.get();
     }
 }

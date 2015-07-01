@@ -78,6 +78,11 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.5.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.forgerock.openicf.framework</groupId>
+            <artifactId>connector-framework</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -89,9 +94,8 @@
                 <configuration>
                     <unpackBundle>false</unpackBundle>
                     <instructions>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.forgerock.openicf.connectors.elastic.*</Export-Package>
+                        <Import-Package />
+                        <Embed-Dependency>*;scope=compile|runtime;artifactId=!jackson-annotations|jackson-databind</Embed-Dependency>
                     </instructions>
                 </configuration>
             </plugin>

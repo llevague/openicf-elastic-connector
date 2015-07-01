@@ -27,7 +27,11 @@ package org.forgerock.openicf.connectors.elastic;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.elasticsearch.Version;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -43,6 +47,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 
+import static java.util.Arrays.asList;
 import static org.elasticsearch.index.query.FilterBuilders.orFilter;
 import static org.elasticsearch.index.query.FilterBuilders.rangeFilter;
 import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
@@ -63,6 +68,7 @@ public class ElasticConnector implements
         , UpdateOp
         , SearchOp<FilterBuilder>
         , SyncOp
+        , TestOp
 {
     /**
      * Setup logging for the {@link ElasticConnector}.
@@ -106,11 +112,6 @@ public class ElasticConnector implements
      * @see org.identityconnectors.framework.spi.Connector#dispose()
      */
     public void dispose() {
-        configuration = null;
-        if (connection != null) {
-            connection.dispose();
-            connection = null;
-        }
     }
 
 
@@ -129,9 +130,9 @@ public class ElasticConnector implements
     @Override
     public Uid create(final ObjectClass objectClass, final Set<Attribute> createAttributes,
                       final OperationOptions options) {
-        final Uid uid = AttributeUtil.getUidAttribute(createAttributes);
-        connection.client()
-                .prepareIndex(configuration.getIndex(), objectClass.getObjectClassValue())
+        final Uid uid = new Uid(AttributeUtil.getNameFromAttributes(createAttributes).getNameValue());
+        client()
+                .prepareIndex(configuration.getIndex(), configuration.getType())
                 .setId(uid.getUidValue())
                 .setSource(attributesToBytes(createAttributes))
                 .get();
@@ -144,10 +145,9 @@ public class ElasticConnector implements
     @Override
     public void delete(final ObjectClass objectClass, final Uid uid,
                        final OperationOptions options) {
-        connection.client()
-                .prepareDelete(configuration.getIndex(), objectClass.getObjectClassValue(), uid.getUidValue())
+        client()
+                .prepareDelete(configuration.getIndex(), configuration.getType(), uid.getUidValue())
                 .get();
-
     }
 
     /**
@@ -156,8 +156,8 @@ public class ElasticConnector implements
     @Override
     public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> replaceAttributes,
                       OperationOptions options) {
-        connection.client()
-                .prepareUpdate(configuration.getIndex(), objectClass.getObjectClassValue(), uid.getUidValue())
+        client()
+                .prepareUpdate(configuration.getIndex(), configuration.getType(), uid.getUidValue())
                 .setDoc(attributesToBytes(replaceAttributes))
                 .get();
         return uid;
@@ -208,15 +208,25 @@ public class ElasticConnector implements
     private List<ConnectorObject> doSearch(ObjectClass oclass, FilterBuilder filter, OperationOptions options) {
         final List<ConnectorObject> results = new ArrayList<>();
 
-        final SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
-                .query(filteredQuery(null, filter));
-        final SearchResponse response = connection.client()
+        final TimeValue keepAlive = TimeValue.timeValueMinutes(2);
+        final SearchResponse response = client()
                 .prepareSearch(configuration.getIndex())
-                .setSource(sourceBuilder.buildAsBytes())
+                .setSource(new SearchSourceBuilder().query(filteredQuery(null, filter)).buildAsBytes())
+                .setSize(100)
                 .setExplain(true)
+                .setScroll(keepAlive)
                 .get();
 
-        for (SearchHit hit : response.getHits().hits()) {
+        SearchResponse scrollResponse = response;
+        final List<SearchHit> hits = new ArrayList<>();
+        while (scrollResponse.getHits().hits().length > 0) {
+            hits.addAll(asList(scrollResponse.getHits().hits()));
+            scrollResponse = client().prepareSearchScroll(response.getScrollId())
+                    .setScroll(keepAlive)
+                    .get();
+        }
+
+        for (SearchHit hit : hits) {
             final ConnectorObjectBuilder cobld = new ConnectorObjectBuilder();
             cobld.setUid(hit.getId());
             for (Entry<String, Object> entry : hit.getSource().entrySet()) {
@@ -259,5 +269,13 @@ public class ElasticConnector implements
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss'Z'");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
         return sdf.format(new Date());
+    }
+    
+    private Client client() {
+        return connection.client();
+    }
+
+    @Override
+    public void test() {
     }
 }

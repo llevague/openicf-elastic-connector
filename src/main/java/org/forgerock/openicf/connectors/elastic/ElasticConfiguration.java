@@ -58,6 +58,11 @@ public class ElasticConfiguration extends AbstractConfiguration {
     private String index;
 
     /**
+     * The index to use.
+     */
+    private String type;
+
+    /**
      * The cluster name to connect to.
      */
     private String clusterName = "elasticsearch";
@@ -105,7 +110,23 @@ public class ElasticConfiguration extends AbstractConfiguration {
         return this;
     }
 
-    @ConfigurationProperty(order = 3, displayMessageKey = "clusterName.display",
+    @ConfigurationProperty(order = 3, displayMessageKey = "type.display",
+            groupMessageKey = "basic.group", helpMessageKey = "type.help",
+            required = true, confidential = false)
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        withType(type);
+    }
+
+    public ElasticConfiguration withType(String type) {
+        this.type = type;
+        return this;
+    }
+
+    @ConfigurationProperty(order = 4, displayMessageKey = "clusterName.display",
             groupMessageKey = "basic.group", helpMessageKey = "clusterName.help",
             required = true, confidential = false)
     public String getClusterName() {
@@ -126,10 +147,13 @@ public class ElasticConfiguration extends AbstractConfiguration {
      */
     public void validate() {
         if (hosts.length == 0) {
-            throw new IllegalArgumentException("Host cannot be null or empty.");
+            throw new IllegalArgumentException("Hosts cannot be null or empty.");
         }
         if (StringUtil.isBlank(index)) {
             throw new IllegalArgumentException("Index cannot be null or empty.");
+        }
+        if (StringUtil.isBlank(type)) {
+            throw new IllegalArgumentException("Type cannot be null or empty.");
         }
     }
 

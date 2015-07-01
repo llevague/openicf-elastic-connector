@@ -39,8 +39,10 @@ connector.i2.wrong.login=""
 
 
 configuration{
-    hosts = ["127.0.0.1:9300"] as String[]
+    hosts = ["localhost;9300"] as String[]
     index = "tests"
+    type = "tests"
+    clusterName = "elasticsearch"
 }
 
 testsuite {
